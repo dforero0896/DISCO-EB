@@ -912,7 +912,11 @@ def evolve_modes_batched( *, tau_max, tau_out, param, kmodes,
 
     n_batches, n_steps, _batch_size, _nvar = ys.shape
 
-    reordered_ys = jnp.reshape(ys, (n_total, n_steps, _nvar))
+    # ``diffeqsolve`` / ``SaveAt`` return the time axis first, so after vmapping the batches the
+    # layout is ``(n_batches, n_steps, batch_size, nvar)``.  Regroup the batch and mode axes back
+    # into the single ``n_total = n_batches * batch_size`` mode axis; a plain reshape only happens
+    # to be correct when ``n_steps == 1`` (it silently mixes the step and mode axes otherwise).
+    reordered_ys = jnp.transpose(ys, (0, 2, 1, 3)).reshape(n_total, n_steps, _nvar)
 
     # convert outputs
     def calculate_final_ys( kmode, ys): 
